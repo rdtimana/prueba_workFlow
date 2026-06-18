@@ -1,0 +1,56 @@
+name: Auto Merge ws-objects -> main
+
+on:
+  push:
+    branches:
+      - desarrollo/feature/ws-objects
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Obtener ramas
+        run: git fetch origin
+
+      - name: Crear rama local main
+        run: git checkout -B main origin/main
+
+      - name: Intentar merge
+        id: merge_step
+        continue-on-error: true
+        run: |
+          git merge origin/desarrollo/feature/ws-objects --no-edit
+
+      - name: Push a main si el merge fue exitoso
+        if: steps.merge_step.outcome == 'success'
+        run: |
+          git push origin main
+
+      - name: Crear Pull Request si hubo conflicto
+        if: steps.merge_step.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: auto-pr-ws-objects
+          base: main
+          title: "Conflicto detectado: ws-objects → main"
+          body: |
+            Se detectaron conflictos al intentar fusionar automáticamente
+            la rama desarrollo/feature/ws-objects con main.
+
+            Se creó este Pull Request para resolverlos manualmente.
